@@ -1,0 +1,96 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Function to calculate the Euclidean distance between two cities
+def distance(city1, city2):
+    return np.linalg.norm(city1 - city2)
+
+# Function to calculate the total distance of a tour
+def tour_distance(tour, cities):
+    total_distance = 0
+    for i in range(len(tour)):
+        city1 = cities[tour[i]]
+        city2 = cities[tour[(i + 1) % len(tour)]]
+        total_distance += distance(city1, city2)
+    return total_distance
+
+# Function to generate a random tour
+def generate_tour(num_cities):
+    return np.random.permutation(num_cities)
+
+# Function to initialize fireflies population
+def initialize_fireflies(num_fireflies, num_cities):
+    fireflies = []
+    for _ in range(num_fireflies):
+        fireflies.append(generate_tour(num_cities))
+    return fireflies
+
+# Function to calculate attractiveness between two fireflies
+def attractiveness(firefly1, firefly2, cities):
+    distance1 = tour_distance(firefly1, cities)
+    distance2 = tour_distance(firefly2, cities)
+    if distance1 <= distance2:
+        return 1.0
+    else:
+        return np.exp(-abs(distance1 - distance2))
+
+# Function to update firefly positions using firefly algorithm
+def update_fireflies(fireflies, cities, alpha, beta, gamma):
+    num_fireflies = len(fireflies)
+    num_cities = len(cities)
+    updated_fireflies = []
+
+    for i in range(num_fireflies):
+        current_firefly = fireflies[i]
+        updated_firefly = np.copy(current_firefly)
+
+        for j in range(num_fireflies):
+            if i != j:
+                other_firefly = fireflies[j]
+
+                # Calculate attractiveness and distance between fireflies
+                att = attractiveness(current_firefly, other_firefly, cities)
+                dist = distance(current_firefly[0], other_firefly[0])
+
+                # Update firefly position
+                updated_firefly += beta * att * (other_firefly - current_firefly) / (dist ** gamma)
+
+        # Random movement
+        updated_firefly += alpha * (np.random.rand(num_cities, 2) - 0.5)
+
+        updated_fireflies.append(updated_firefly)
+
+    return updated_fireflies
+
+# Function to run the firefly algorithm
+def run_firefly_algorithm(num_fireflies, num_iterations, cities):
+    num_cities = len(cities)
+    alpha = 0.1  # Control parameter for random movement
+    beta = 1.0   # Control parameter for attractiveness
+    gamma = 1.0  # Control parameter for distance
+
+    # Initialize fireflies population
+    fireflies = initialize_fireflies(num_fireflies, num_cities)
+
+    best_tour = None
+    best_distance = np.inf
+    distances = []
+
+    for _ in range(num_iterations):
+        # Update firefly positions
+        fireflies = update_fireflies(fireflies, cities, alpha, beta, gamma)
+
+        # Calculate tour distances
+        tour_distances = [tour_distance(firefly, cities) for firefly in fireflies]
+
+        # Find the best tour
+        min_distance_idx = np.argmin(tour_distances)
+        min_distance = tour_distances[min_distance_idx]
+
+        if min_distance < best_distance:
+            best_tour = fireflies[min_distance_idx]
+            best_distance = min_distance
+
+        distances.append(best_distance)
+
+    return best
